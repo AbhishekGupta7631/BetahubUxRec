@@ -35,7 +35,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["content.css", "libs/*"],
+      "resources": [
+        "content.css",
+        "libs/*",
+        "export_viewer.html",
+        "export_viewer.css",
+        "export_viewer.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

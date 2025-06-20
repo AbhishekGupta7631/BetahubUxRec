@@ -5,8 +5,8 @@ class D365Recorder {
         this.stepCounter = 0;
         this.lastInteraction = null;
         this.annotationMode = false;
-        this.currentHighlight = null;
-        this.overlayContainer = null;
+        // this.currentHighlight = null; // Removed
+        // this.overlayContainer = null; // Removed
         this.noteDialog = null;
         this.moveablePopup = null; // Property for the moveable popup
 
@@ -58,50 +58,84 @@ class D365Recorder {
         let isDragging = false;
         let offsetX, offsetY;
 
-        header.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            offsetX = e.clientX - this.moveablePopup.offsetLeft;
-            offsetY = e.clientY - this.moveablePopup.offsetTop;
-            header.style.cursor = 'grabbing';
-            // Prevent text selection
-            e.preventDefault();
-        });
+        if (header) {
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - this.moveablePopup.offsetLeft;
+                offsetY = e.clientY - this.moveablePopup.offsetTop;
+                header.style.cursor = 'grabbing';
+                // Prevent text selection
+                e.preventDefault();
+            });
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            this.moveablePopup.style.left = `${e.clientX - offsetX}px`;
-            this.moveablePopup.style.top = `${e.clientY - offsetY}px`;
-        });
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || !this.moveablePopup) return;
+                this.moveablePopup.style.left = `${e.clientX - offsetX}px`;
+                this.moveablePopup.style.top = `${e.clientY - offsetY}px`;
+            });
 
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                header.style.cursor = 'move';
-            }
-        });
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    if (header) { // Check header exists before changing cursor
+                       header.style.cursor = 'move';
+                    }
+                }
+            });
+        } else {
+            console.error("D365 Recorder: Popup header not found.");
+        }
 
         // Button Listeners
-        stopButton.addEventListener('click', () => {
-            this.stopRecording();
-        });
-
-        exportHtmlButton.addEventListener('click', () => {
-            chrome.storage.local.get(['steps', 'currentSession'], (result) => {
-                const sessionData = result.currentSession || { name: 'Workflow Recording', startTime: new Date().toISOString(), url: window.location.href };
-                const data = {
-                    steps: result.steps || [],
-                    session: sessionData,
-                    exportedAt: new Date().toISOString(),
-                    totalSteps: (result.steps || []).length
-                };
-                const htmlContent = this.generateHtmlReport(data);
-                this.downloadFile(htmlContent, `workflow_report_${Date.now()}.html`, 'text/html');
+        if (stopButton) {
+            stopButton.addEventListener('click', () => {
+                this.stopRecording();
             });
-        });
+        } else {
+            console.error("D365 Recorder: Stop button not found in popup.");
+        }
 
-        exportJsonButton.addEventListener('click', () => {
-            chrome.storage.local.get(['steps'], (result) => {
-                const exportData = {
+        if (exportHtmlButton) {
+            exportHtmlButton.addEventListener('click', () => {
+                chrome.storage.local.get(['steps', 'currentSession'], (result) => {
+                    if (chrome.runtime.lastError) {
+                        console.error("D365 Recorder: Error getting data for export:", chrome.runtime.lastError);
+                        return;
+                    }
+                    const dataToStore = {
+                        steps: result.steps || [],
+                        session: result.currentSession || { name: 'Workflow Recording', startTime: new Date().toISOString(), url: window.location.href }, // Provide a default session object
+                        totalSteps: (result.steps || []).length,
+                        exportedAt: new Date().toISOString()
+                    };
+
+                    chrome.storage.local.set({ exportDataForViewer: dataToStore }, () => {
+                        if (chrome.runtime.lastError) {
+                            console.error("D365 Recorder: Error setting data for viewer:", chrome.runtime.lastError);
+                            // Optionally, inform the user via an alert or a message in the popup
+                            return;
+                        }
+                        chrome.runtime.sendMessage({ action: 'openTabForExportViewer' }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                console.error("D365 Recorder: Error sending message to open viewer tab:", chrome.runtime.lastError.message);
+                                // Optionally, inform the user
+                            } else if (response && !response.success) {
+                                console.error("D365 Recorder: Background script reported failure opening viewer tab:", response.message);
+                            } else {
+                                console.log("D365 Recorder: Message sent to open export viewer tab.");
+                            }
+                        });
+                    });
+                });
+            });
+        } else {
+            console.error("D365 Recorder: Export HTML button not found in popup.");
+        }
+
+        if (exportJsonButton) {
+            exportJsonButton.addEventListener('click', () => {
+                chrome.storage.local.get(['steps'], (result) => {
+                    const exportData = {
                     steps: result.steps || [],
                     exportedAt: new Date().toISOString(),
                     totalSteps: (result.steps || []).length
@@ -113,7 +147,10 @@ class D365Recorder {
 
     showMoveablePopup() {
         if (this.moveablePopup) {
+            console.log('D365 Recorder: Attempting to show moveable popup'); // Added console.log
             this.moveablePopup.style.display = 'block';
+        } else {
+            console.error('D365 Recorder: Moveable popup instance is null in showMoveablePopup.');
         }
     }
 
@@ -124,7 +161,7 @@ class D365Recorder {
     }
 
     init() {
-        this.createOverlayContainer();
+        // this.createOverlayContainer(); // Removed
         this.bindEvents();
         this.setupMutationObserver();
         
@@ -136,20 +173,7 @@ class D365Recorder {
         });
     }
 
-    createOverlayContainer() {
-        this.overlayContainer = document.createElement('div');
-        this.overlayContainer.id = 'd365-recorder-overlay';
-        this.overlayContainer.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 999999;
-        `;
-        document.body.appendChild(this.overlayContainer);
-    }
+    // createOverlayContainer() { ... } // Removed
 
     bindEvents() {
         // Listen for messages from popup
@@ -248,7 +272,7 @@ class D365Recorder {
         this.sessionId = null;
         this.hideRecordingIndicator();
         this.hideMoveablePopup(); // Hide the popup
-        this.clearHighlights();
+        // this.clearHighlights(); // Removed
     }
 
     handleClick(event) {
@@ -314,7 +338,7 @@ class D365Recorder {
         const element = event.target;
         if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
             // Add visual indicator for focused field
-            this.highlightElement(element, 'focus');
+            // this.highlightElement(element, 'focus'); // Removed
         }
     }
 
@@ -338,14 +362,14 @@ class D365Recorder {
         
         const element = event.target;
         if (this.isInteractiveElement(element)) {
-            this.highlightElement(element, 'hover');
+            // this.highlightElement(element, 'hover'); // Removed
         }
     }
 
     handleMouseOut(event) {
         if (!this.isRecording) return;
         
-        this.removeHighlight('hover');
+        // this.removeHighlight('hover'); // Removed
     }
 
     recordStep(stepData) {
@@ -579,49 +603,9 @@ class D365Recorder {
                element.onclick !== null;
     }
 
-    highlightElement(element, type = 'default') {
-        this.removeHighlight(type);
-        
-        const rect = element.getBoundingClientRect();
-        const highlight = document.createElement('div');
-        highlight.className = `d365-recorder-highlight d365-recorder-highlight-${type}`;
-        highlight.style.cssText = `
-            position: fixed;
-            left: ${rect.left}px;
-            top: ${rect.top}px;
-            width: ${rect.width}px;
-            height: ${rect.height}px;
-            border: 2px solid ${type === 'focus' ? '#0078d4' : '#28a745'};
-            background: ${type === 'focus' ? 'rgba(0, 120, 212, 0.1)' : 'rgba(40, 167, 69, 0.1)'};
-            pointer-events: none;
-            z-index: 999998;
-            border-radius: 4px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
-        `;
-        
-        this.overlayContainer.appendChild(highlight);
-        this.currentHighlight = highlight;
-        
-        // Auto-remove hover highlights
-        if (type === 'hover') {
-            setTimeout(() => this.removeHighlight(type), 3000);
-        }
-    }
-
-    removeHighlight(type) {
-        const highlights = this.overlayContainer.querySelectorAll(`.d365-recorder-highlight-${type}`);
-        highlights.forEach(highlight => highlight.remove());
-        
-        if (type === 'hover' && this.currentHighlight?.className.includes('hover')) {
-            this.currentHighlight = null;
-        }
-    }
-
-    clearHighlights() {
-        this.overlayContainer.innerHTML = '';
-        this.currentHighlight = null;
-    }
+    // highlightElement(element, type = 'default') { ... } // Removed
+    // removeHighlight(type) { ... } // Removed
+    // clearHighlights() { ... } // Removed
 
     async captureViewportScreenshot() {
         try {

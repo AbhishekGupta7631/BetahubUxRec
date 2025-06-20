@@ -72,6 +72,18 @@ class RecordingManager {
                     sendResponse({ success: true });
                     break;
 
+                case 'openTabForExportViewer': // New case
+                    const viewerUrl = chrome.runtime.getURL('export_viewer.html');
+                    chrome.tabs.create({ url: viewerUrl }, (tab) => {
+                        if (chrome.runtime.lastError) {
+                            console.error("Error opening export viewer tab:", chrome.runtime.lastError.message);
+                            sendResponse({ success: false, message: 'Failed to open export viewer tab: ' + chrome.runtime.lastError.message });
+                        } else {
+                            sendResponse({ success: true, message: 'Export viewer tab opened.', tabId: tab.id });
+                        }
+                    });
+                    return true; // Indicate we will send a response asynchronously
+
                 default:
                     sendResponse({ success: false, message: 'Unknown action' });
             }
