@@ -8,8 +8,119 @@ class D365Recorder {
         this.currentHighlight = null;
         this.overlayContainer = null;
         this.noteDialog = null;
+        this.moveablePopup = null; // Property for the moveable popup
+
+        this.popupHTML = `
+            <div id="d365-recorder-popup-header" style="padding: 10px; cursor: move; background-color: #0078d4; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 14px; text-align: center;">
+                D365 Recorder
+            </div>
+            <div id="d365-recorder-popup-body" style="padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <button id="d365-recorder-popup-stop" style="background-color: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-family: 'Segoe UI', sans-serif; font-size: 13px;">Stop Recording</button>
+                <button id="d365-recorder-popup-export-html" style="background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-family: 'Segoe UI', sans-serif; font-size: 13px;">Export HTML</button>
+                <button id="d365-recorder-popup-export-json" style="background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-family: 'Segoe UI', sans-serif; font-size: 13px;">Export JSON</button>
+            </div>
+        `;
+
+        this.popupCSS = `
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            z-index: 1000001;
+            font-family: 'Segoe UI', sans-serif;
+            display: none; /* Initially hidden */
+        `;
         
         this.init();
+    }
+
+    createMoveablePopup() {
+        if (this.moveablePopup) {
+            return;
+        }
+
+        this.moveablePopup = document.createElement('div');
+        this.moveablePopup.id = 'd365-recorder-moveable-popup';
+        this.moveablePopup.style.cssText = this.popupCSS;
+        this.moveablePopup.innerHTML = this.popupHTML;
+        document.body.appendChild(this.moveablePopup);
+
+        const header = this.moveablePopup.querySelector('#d365-recorder-popup-header');
+        const stopButton = this.moveablePopup.querySelector('#d365-recorder-popup-stop');
+        const exportHtmlButton = this.moveablePopup.querySelector('#d365-recorder-popup-export-html');
+        const exportJsonButton = this.moveablePopup.querySelector('#d365-recorder-popup-export-json');
+
+        // Drag functionality
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - this.moveablePopup.offsetLeft;
+            offsetY = e.clientY - this.moveablePopup.offsetTop;
+            header.style.cursor = 'grabbing';
+            // Prevent text selection
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            this.moveablePopup.style.left = `${e.clientX - offsetX}px`;
+            this.moveablePopup.style.top = `${e.clientY - offsetY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                header.style.cursor = 'move';
+            }
+        });
+
+        // Button Listeners
+        stopButton.addEventListener('click', () => {
+            this.stopRecording();
+        });
+
+        exportHtmlButton.addEventListener('click', () => {
+            chrome.storage.local.get(['steps', 'currentSession'], (result) => {
+                const sessionData = result.currentSession || { name: 'Workflow Recording', startTime: new Date().toISOString(), url: window.location.href };
+                const data = {
+                    steps: result.steps || [],
+                    session: sessionData,
+                    exportedAt: new Date().toISOString(),
+                    totalSteps: (result.steps || []).length
+                };
+                const htmlContent = this.generateHtmlReport(data);
+                this.downloadFile(htmlContent, `workflow_report_${Date.now()}.html`, 'text/html');
+            });
+        });
+
+        exportJsonButton.addEventListener('click', () => {
+            chrome.storage.local.get(['steps'], (result) => {
+                const exportData = {
+                    steps: result.steps || [],
+                    exportedAt: new Date().toISOString(),
+                    totalSteps: (result.steps || []).length
+                };
+                this.downloadFile(JSON.stringify(exportData, null, 2), `workflow_export_${Date.now()}.json`, 'application/json');
+            });
+        });
+    }
+
+    showMoveablePopup() {
+        if (this.moveablePopup) {
+            this.moveablePopup.style.display = 'block';
+        }
+    }
+
+    hideMoveablePopup() {
+        if (this.moveablePopup) {
+            this.moveablePopup.style.display = 'none';
+        }
     }
 
     init() {
@@ -122,6 +233,8 @@ class D365Recorder {
         this.sessionId = sessionId;
         this.stepCounter = 0;
         this.showRecordingIndicator();
+        this.createMoveablePopup(); // Create the popup if it doesn't exist
+        this.showMoveablePopup();   // Show the popup
         this.recordStep({
             type: 'session_start',
             description: 'Recording session started',
@@ -134,6 +247,7 @@ class D365Recorder {
         this.isRecording = false;
         this.sessionId = null;
         this.hideRecordingIndicator();
+        this.hideMoveablePopup(); // Hide the popup
         this.clearHighlights();
     }
 
@@ -144,9 +258,10 @@ class D365Recorder {
         const elementInfo = this.getElementInfo(element);
         
         // Skip if clicking on our own UI
-        if (element.closest('#d365-recorder-overlay') || 
+        if (element.closest('#d365-recorder-overlay') ||
             element.closest('#d365-recorder-indicator') ||
-            element.closest('#d365-recorder-note-dialog')) {
+            element.closest('#d365-recorder-note-dialog') ||
+            element.closest('#d365-recorder-moveable-popup')) { // Added moveable popup ID
             return;
         }
 
@@ -409,7 +524,7 @@ class D365Recorder {
                 } else if (element.type === 'radio') {
                     description = `Select radio button "${label || element.value}"`;
                 } else {
-                    description = `Click on "${label || dynControlName || element.tagName.toLowerCase()}"`;
+                    description = `Click on "${label || dynControlName || element.textContent?.trim().substring(0, 50) || element.tagName.toLowerCase()}"`;
                 }
                 break;
                 
@@ -508,27 +623,21 @@ class D365Recorder {
         this.currentHighlight = null;
     }
 
-    async captureElementScreenshot(element) {
+    async captureViewportScreenshot() {
         try {
-            // Ensure element is visible
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Wait a bit for scroll to complete
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Use html2canvas to capture the element
-            const canvas = await html2canvas(element, {
+            // Use html2canvas to capture the viewport
+            const canvas = await html2canvas(document.body, {
                 allowTaint: true,
                 useCORS: true,
-                scrollX: 0,
-                scrollY: 0,
-                windowWidth: window.innerWidth,
-                windowHeight: window.innerHeight
+                x: window.scrollX,
+                y: window.scrollY,
+                width: window.innerWidth,
+                height: window.innerHeight
             });
             
             return canvas.toDataURL('image/png');
         } catch (error) {
-            console.error('Error capturing screenshot:', error);
+            console.error('Error capturing viewport screenshot:', error);
             return null;
         }
     }
@@ -705,6 +814,82 @@ class D365Recorder {
         if (message) {
             message.remove();
         }
+    }
+
+    // Helper function to download files
+    downloadFile(content, filename, mimeType) {
+        const a = document.createElement('a');
+        const blob = new Blob([content], { type: mimeType });
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }
+
+    // Helper function to generate HTML report (simplified version)
+    generateHtmlReport(data) {
+        const { session, steps, exportedAt, totalSteps } = data;
+        let stepsHtml = '';
+
+        if (steps && steps.length > 0) {
+            steps.forEach(step => {
+                stepsHtml += `
+                    <div class="step">
+                        <h4>Step ${step.stepNumber}: ${step.description}</h4>
+                        <p><strong>URL:</strong> <a href="${step.url}" target="_blank">${step.url}</a></p>
+                        <p><strong>Timestamp:</strong> ${new Date(step.timestamp).toLocaleString()}</p>
+                        ${step.note ? `<p><strong>Note:</strong> ${step.note}</p>` : ''}
+                        ${step.elementInfo ? `<p><strong>Element:</strong> ${step.elementInfo.tagName} (${step.elementInfo.selector || 'N/A'})</p>` : ''}
+                        ${step.screenshot ? `<div class="screenshot"><img src="${step.screenshot}" alt="Step Screenshot" style="max-width: 100%; height: auto; border: 1px solid #ddd;"/></div>` : ''}
+                    </div>
+                `;
+            });
+        } else {
+            stepsHtml = '<p>No steps recorded.</p>';
+        }
+
+        return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Workflow Report: ${session.name || 'Untitled Session'}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+                    .container { max-width: 800px; margin: 20px auto; background-color: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                    h1, h2, h3 { color: #005a9e; }
+                    h1 { text-align: center; border-bottom: 2px solid #005a9e; padding-bottom: 10px;}
+                    .session-info p, .report-info p { margin: 5px 0; }
+                    .step { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; background-color: #f9f9f9; border-radius: 5px; }
+                    .step h4 { margin-top: 0; color: #0078d4; }
+                    .screenshot img { max-width: 100%; height: auto; border: 1px solid #ccc; margin-top: 10px; }
+                    a { color: #0078d4; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Workflow Report</h1>
+                    <div class="session-info">
+                        <h2>Session: ${session.name || 'Untitled Session'}</h2>
+                        <p><strong>Start Time:</strong> ${session.startTime ? new Date(session.startTime).toLocaleString() : 'N/A'}</p>
+                        <p><strong>Start URL:</strong> <a href="${session.url || '#'}" target="_blank">${session.url || 'N/A'}</a></p>
+                    </div>
+                    <hr>
+                    <div class="report-info">
+                        <p><strong>Exported At:</strong> ${new Date(exportedAt).toLocaleString()}</p>
+                        <p><strong>Total Steps:</strong> ${totalSteps}</p>
+                    </div>
+                    <hr>
+                    <h2>Recorded Steps</h2>
+                    ${stepsHtml}
+                </div>
+            </body>
+            </html>
+        `;
     }
 }
 
