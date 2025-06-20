@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>D365 FO Training Recorder</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            width: 350px; 
+            min-height: 500px; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f8f9fa;
+            color: #333;
+        }
+        .header { 
+            background: linear-gradient(135deg, #0078d4, #106ebe); 
+            color: white; 
+            padding: 16px; 
+            border-radius: 8px 8px 0 0;
+        }
+        .header h1 { font-size: 16px; margin-bottom: 4px; }
+        .header p { font-size: 12px; opacity: 0.9; }
+        .content { padding: 16px; }
+        .status-card { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 16px; 
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status-indicator { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-bottom: 12px;
+        }
+        .status-dot { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #dc3545;
+        }
+        .status-dot.recording { background: #28a745; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .btn { 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            font-weight: 600;
+            cursor: pointer; 
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .btn-primary { background: #0078d4; color: white; }
+        .btn-primary:hover { background: #106ebe; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .steps-list { margin-top: 12px; }
+        .step-item { 
+            background: white; 
+            border: 1px solid #e9ecef; 
+            border-radius: 6px; 
+            padding: 12px; 
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .step-number { 
+            position: absolute; 
+            top: -8px; 
+            left: 12px; 
+            background: #0078d4; 
+            color: white; 
+            width: 20px; 
+            height: 20px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 12px; 
+            font-weight: bold;
+        }
+        .step-content { margin-top: 8px; }
+        .step-description { font-size: 13px; color: #495057; }
+        .step-meta { font-size: 11px; color: #6c757d; margin-top: 4px; }
+        .export-section { margin-top: 16px; }
+        .export-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .hidden { display: none; }
+        .settings-section { margin-top: 12px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; margin-bottom: 4px; color: #495057; }
+        .form-control { 
+            width: 100%; 
+            padding: 8px; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px; 
+            font-size: 13px;
+        }
+        .progress-bar { 
+            width: 100%; 
+            height: 4px; 
+            background: #e9ecef; 
+            border-radius: 2px; 
+            overflow: hidden; 
+            margin: 8px 0;
+        }
+        .progress-fill { 
+            height: 100%; 
+            background: #0078d4; 
+            transition: width 0.3s; 
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 D365 FO Recorder</h1>
+        <p>Capture training workflows</p>
+    </div>
+    
+    <div class="content">
+        <div class="status-card">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Ready to record</span>
+            </div>
+            <div class="progress-bar hidden" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <button class="btn btn-primary" id="startRecording">🎬 Start Recording</button>
+            <button class="btn btn-danger hidden" id="stopRecording">⏹️ Stop Recording</button>
+            <button class="btn btn-secondary" id="clearSteps">🗑️ Clear All Steps</button>
+        </div>
+
+        <div class="settings-section">
+            <div class="form-group">
+                <label for="sessionName">Session Name:</label>
+                <input type="text" class="form-control" id="sessionName" placeholder="Enter workflow name...">
+            </div>
+        </div>
+
+        <div class="steps-list" id="stepsList">
+            <div id="noSteps" class="step-item" style="text-align: center; color: #6c757d;">
+                No steps recorded yet. Click "Start Recording" to begin.
+            </div>
+        </div>
+
+        <div class="export-section hidden" id="exportSection">
+            <h3 style="font-size: 14px; margin-bottom: 12px; color: #495057;">📤 Export Options</h3>
+            <div class="export-options">
+                <button class="btn btn-secondary" id="exportJson">JSON</button>
+                <button class="btn btn-secondary" id="exportHtml">HTML</button>
+            </div>
+            <button class="btn btn-primary" id="generateManual" style="margin-top: 8px;">📋 Generate Training Manual</button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+/* D365 FO Training Recorder - Content Script Styles */
+
+/* Recording Indicator */
+#d365-recorder-indicator {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: #dc3545 !important;
+    color: white !important;
+    padding: 10px 15px !important;
+    border-radius: 25px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    pointer-events: none !important;
+    animation: d365-recorder-pulse 1.5s infinite !important;
+}
+
+@keyframes d365-recorder-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes d365-recorder-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* Overlay Container */
+#d365-recorder-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    z-index: 2147483646 !important;
+}
+
+/* Element Highlights */
+.d365-recorder-highlight {
+    position: fixed !important;
+    pointer-events: none !important;
+    z-index: 2147483645 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.d365-recorder-highlight-hover {
+    border: 2px solid #28a745 !important;
+    background: rgba(40, 167, 69, 0.1) !important;
+}
+
+.d365-recorder-highlight-focus {
+    border: 2px solid #0078d4 !important;
+    background: rgba(0, 120, 212, 0.1) !important;
+}
+
+.d365-recorder-highlight-selected {
+    border: 3px solid #ffc107 !important;
+    background: rgba(255, 193, 7, 0.2) !important;
+}
+
+.d365-recorder-highlight-annotation {
+    border: 2px solid #dc3545 !important;
+    background: rgba(220, 53, 69, 0.1) !important;
+}
+
+/* Note Dialog */
+#d365-recorder-note-dialog {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483647 !important;
+    width: 400px !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    padding: 0 !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    border: 1px solid #ddd !important;
+}
+
+#d365-recorder-note-dialog * {
+    box-sizing: border-box !important;
+}
+
+#d365-recorder-note-dialog .dialog-header {
+    background: #0078d4 !important;
+    color: white !important;
+    padding: 16px !important;
+    border-radius: 8px 8px 0 0 !important;
+    margin: 0 !important;
+}
+
+#d365-recorder-note-dialog .dialog-header h3 {
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+#d365-recorder-note-dialog .dialog-content {
+    padding: 20px !important;
+}
+
+#d365-recorder-note-dialog textarea {
+    width: 100% !important;
+    height: 100px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 10px !important;
+    font-size: 14px !important;
+    resize: vertical !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    outline: none !important;
+    transition: border-color 0.2s !important;
+}
+
+#d365-recorder-note-dialog textarea:focus {
+    border-color: #0078d4 !important;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2) !important;
+}
+
+#d365-recorder-note-dialog .dialog-actions {
+    margin-top: 15px !important;
+    display: flex !important;
+    gap: 10px !important;
+    justify-content: flex-end !important;
+}
+
+#d365-recorder-note-dialog button {
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    transition: background-color 0.2s !important;
+}
+
+#d365-recorder-note-dialog button:hover {
+    opacity: 0.9 !important;
+}
+
+#d365-recorder-note-dialog button:active {
+    transform: translateY(1px) !important;
+}
+
+#d365-recorder-note-dialog #cancelNote {
+    background: #6c757d !important;
+    color: white !important;
+}
+
+#d365-recorder-note-dialog #addNote {
+    background: #0078d4 !important;
+    color: white !important;
+}
+
+/* Message Toast */
+#d365-recorder-message {
+    position: fixed !important;
+    top: 70px !important;
+    right: 20px !important;
+    background: #0078d4 !important;
+    color: white !important;
+    padding: 10px 15px !important;
+    border-radius: 6px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 14px !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    pointer-events: none !important;
+    animation: d365-recorder-slideIn 0.3s ease !important;
+}
+
+@keyframes d365-recorder-slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Floating Toolbar */
+#d365-recorder-toolbar {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    background: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    border: 1px solid #ddd !important;
+}
+
+#d365-recorder-toolbar button {
+    background: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    transition: all 0.2s !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+#d365-recorder-toolbar button:hover {
+    background: #e9ecef !important;
+    border-color: #adb5bd !important;
+}
+
+#d365-recorder-toolbar button.active {
+    background: #0078d4 !important;
+    color: white !important;
+    border-color: #0078d4 !important;
+}
+
+/* Annotation Cursor */
+.d365-recorder-annotation-mode {
+    cursor: crosshair !important;
+}
+
+/* Step Counter */
+#d365-recorder-step-counter {
+    position: fixed !important;
+    top: 20px !important;
+    left: 20px !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 12px !important;
+    z-index: 2147483647 !important;
+    pointer-events: none !important;
+}
+
+/* Loading Spinner */
+.d365-recorder-loading {
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #f3f3f3 !important;
+    border-top: 2px solid #0078d4 !important;
+    border-radius: 50% !important;
+    animation: d365-recorder-spin 1s linear infinite !important;
+}
+
+@keyframes d365-recorder-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #d365-recorder-note-dialog {
+        width: 95vw !important;
+        margin: 20px !important;
+    }
+    
+    #d365-recorder-indicator {
+        top: 10px !important;
+        right: 10px !important;
+        font-size: 12px !important;
+        padding: 8px 12px !important;
+    }
+    
+    #d365-recorder-toolbar {
+        bottom: 10px !important;
+        right: 10px !important;
+        left: 10px !important;
+        justify-content: center !important;
+    }
+}
+
+/* Prevent interference with page styles */
+#d365-recorder-overlay,
+#d365-recorder-indicator,
+#d365-recorder-note-dialog,
+#d365-recorder-message,
+#d365-recorder-toolbar,
+#d365-recorder-step-counter,
+.d365-recorder-highlight {
+    all: initial !important;
+}
+
+/* Restore necessary properties */
+#d365-recorder-overlay * {
+    box-sizing: border-box !important;
+}
+
+/* Hide scrollbars when dialog is open */
+body.d365-recorder-dialog-open {
+    overflow: hidden !important;
+}
